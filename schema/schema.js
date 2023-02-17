@@ -11,15 +11,22 @@ const {
     GraphQLNonNull,
 } = graphql;
 
-const author = new GraphQLObjectType({
+const authorType = new GraphQLObjectType({
     name: 'author',
     fields: () => ({
         id: { type: GraphQLString },
         name: { type: GraphQLString },
-    })
+        posts: {
+            type: new GraphQLList(postsType),
+            resolve(parent, args) {
+                return authorModel.find({ author: parent.name });
+            },
+        },
+    }
+    )
 });
 
-const posts = new GraphQLObjectType({
+const postsType = new GraphQLObjectType({
     name: 'post',
     fields: () => ({
         id: { type: GraphQLString },
@@ -27,7 +34,7 @@ const posts = new GraphQLObjectType({
         content: { type: GraphQLString },
         author: { type: GraphQLString },
         author_data: {
-            type: author,
+            type: authorType,
             resolve(parent, args) {
                 return authorModel.find({ name: parent.author });
             }
@@ -38,19 +45,25 @@ const posts = new GraphQLObjectType({
 const rootQuery = new GraphQLObjectType({
     name: 'rootQuery',
     fields: {
-        post: {
-            type: posts,
+        getPost: {
+            type: postsType,
             args: { id: { type: GraphQLString } },
             resolve(parent, args) {
                 return postModel.findById(args.id);
             }
         },
-        posts: {
-            type: new GraphQLList(posts),
+        getPosts: {
+            type: new GraphQLList(postsType),
             resolve(parent, args) {
                 return postModel.find({});
             },
-        }
+        },
+        getAuthors: {
+            type: new GraphQLList(authorType),
+            resolve(parent, args) {
+                return authorModel.find({});
+            },
+        },
     },
 });
 
@@ -58,7 +71,7 @@ const mutation = new GraphQLObjectType({
     name: 'mutation',
     fields: {
         addPost: {
-            type: posts,
+            type: postsType,
             args: {
                 title: { type: new GraphQLNonNull(GraphQLString) },
                 content: { type: new GraphQLNonNull(GraphQLString) },
